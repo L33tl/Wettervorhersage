@@ -22,6 +22,7 @@ class WeatherWorker:
         self.owm = OWM(API_key, config_dict)
         self.weather_mgr = self.owm.weather_manager()
         self.city = geocoder.ip('me')
+        self.db_worker = DBWorker()
 
     def has_connected(self) -> bool:
         return bool(socket.create_connection((self.weather_server, 80)))
@@ -37,29 +38,29 @@ class WeatherWorker:
         if forecast_type == 'today':
             self.weather_today(has_connection)
         elif forecast_type == 'days':
-            self.weather_by_days(has_connection)
+            self.weather_daily(has_connection)
         else:
-            self.weather_by_hours(has_connection)
+            self.weather_hourly(has_connection)
 
     def weather_today(self, has_connection):
         if has_connection:
             return self.weather_mgr.weather_at_place(self.city.city)
         else:
-            pass
+            return self.db_worker.weather_today()
 
-    def weather_by_days(self, has_connection):
+    def weather_daily(self, has_connection):
         if has_connection:
             loc = geocoder.location(self.city.latlng)
             return self.weather_mgr.one_call(lat=loc.latitude, lon=loc.longitude).forecast_daily
         else:
-            pass
+            return self.db_worker.weather_daily()
 
-    def weather_by_hours(self, has_connection):
+    def weather_hourly(self, has_connection):
         if has_connection:
             loc = geocoder.location(self.city.latlng)
             return self.weather_mgr.one_call(lat=loc.latitude, lon=loc.longitude).forecast_hourly
         else:
-            pass
+            return self.db_worker.weather_hourly()
 
     def check_city(self, city):
         try:

@@ -72,7 +72,7 @@ class ChangeCityForm(QWidget):
 
     def ok(self):
         city = self.city_edit.text().strip()
-        answer = WeatherWorker.change_city(self.first_form.weather, city)
+        answer = self.first_form.weather.change_city(city)
         if answer:
             self.close()
         else:
