@@ -50,7 +50,7 @@ class WeatherWorker:
 
     def weather_daily(self, has_connection):
         if has_connection:
-            loc = geocoder.location(self.city.latlng)
+            loc = geocoder.location(self.city)
             return self.weather_mgr.one_call(lat=loc.latitude, lon=loc.longitude).forecast_daily
         else:
             return self.db_worker.weather_daily()
