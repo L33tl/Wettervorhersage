@@ -1,63 +1,57 @@
 import sys
 
-import geocoder
 from PyQt5 import uic
-from PyQt5.QtGui import QIcon
-from PyQt5.QtWidgets import QApplication, QMainWindow, QGridLayout, QWidget, QAction, qApp
+from PyQt5.QtWidgets import QApplication, QMainWindow, QWidget
+
 from main_window_ui import Ui_MainWindow
 from weather import WeatherWorker
 
 
-class MainWindow(QMainWindow):
+class MainWindow(QMainWindow, Ui_MainWindow):
     def __init__(self):
         super().__init__()
-        self.change_city_form = ChangeCityForm(self)
-        uic.loadUi('main_window_ui.ui', self)
-        # self.setupUi(self)
-        self.buttons_group = {
-            'today': self.Btn_today, 'days': self.Btn_byDays, 'hours': self.Btn_byHours
-            }
-        for btn in self.buttons_group.values():
-            btn.clicked.connect(self.group_button_click)
-        # self.change_city_btn.clicked.connect(self.change_city)
+        # uic.loadUi('main_window_ui.ui', self)
+        self.setupUi(self)
+        self.initUI()
 
+        # self.load_widget_today()
+
+    # noinspection PyAttributeOutsideInit,PyPep8Naming
+    def initUI(self):
+        self.change_city_form = ChangeCityForm(self)
+        self.Btn_today.clicked.connect(self.load_widget_today)
+        self.Btn_byDays.clicked.connect(self.load_widget_days)
+        self.Btn_byHours.clicked.connect(self.load_widget_hours)
         self.change_city_btn.triggered.connect(self.change_city)
+
         self.weather = WeatherWorker()
+        # self.current_widget = self.widget_today
+
+        print(self.tabWidget.currentWidget())
 
     def change_city(self):
         self.change_city_form.show()
 
-    def group_button_click(self):
-        if self.buttons_group['today'] == self.sender():
-            self.__move_to_layout(self.widget_today)
-        elif self.buttons_group['days'] == self.sender():
-            self.__move_to_layout(self.widget_days)
-        elif self.buttons_group['hours'] == self.sender():
-            self.__move_to_layout(self.widget_hours)
+    def change_widget(self, to_widget):
+        self.current_widget.hide()
+        # noinspection PyAttributeOutsideInit
+        self.current_widget = to_widget
+        exec(f'self.load_widget_{to_widget.objectName().split("_")[1]}')
 
-    def __move_to_layout(self, to_layout: QWidget):
-        self.widget_today.hide()
-        self.widget_days.hide()
-        self.widget_hours.hide()
-        # self.update_layout(to_layout)
-        to_layout.show()
+    def load_widget_today(self):
+        self.change_widget(self.widget_today)
+        weather = self.get_weather()
 
-    def load_layout_today(self, layout):
-        pass
+    def load_widget_days(self):
+        self.change_widget(self.widget_days)
+        weather = self.get_weather()
 
-    def load_layout_by_days(self, layout):
-        pass
-
-    def load_layout_by_hours(self, layout):
-        pass
+    def load_widget_hours(self):
+        self.change_widget(self.widget_hours)
+        weather = self.get_weather()
 
     def get_weather(self):
-        if self.today_layout.isEnabled():
-            self.weather.weather('today')
-        elif self.days_layout.isEnabled():
-            self.weather.weather('days')
-        else:
-            self.weather.weather('hours')
+        return self.weather.weather(self.current_widget.objectName().split('_')[1])
 
 
 class ChangeCityForm(QWidget):
@@ -71,6 +65,8 @@ class ChangeCityForm(QWidget):
 
     def ok(self):
         city = self.city_edit.text().strip()
+        if not city:
+            return self.not_found_error_label.setText('Введите название города')
         answer = self.first_form.weather.change_city(city)
         if answer:
             self.close()
@@ -86,4 +82,5 @@ if __name__ == '__main__':
     app = QApplication(sys.argv)
     ex = MainWindow()
     ex.show()
+
     sys.exit(app.exec())
