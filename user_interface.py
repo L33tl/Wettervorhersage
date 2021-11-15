@@ -52,13 +52,12 @@ class MainWindow(QMainWindow):
         pass
 
     def get_weather(self):
-        has_connection = self.weather.has_connected()
         if self.today_layout.isEnabled():
-            self.weather.weather('today', has_connection)
+            self.weather.weather('today')
         elif self.days_layout.isEnabled():
-            self.weather.weather('days', has_connection)
+            self.weather.weather('days')
         else:
-            self.weather.weather('hours', has_connection)
+            self.weather.weather('hours')
 
 
 class ChangeCityForm(QWidget):

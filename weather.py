@@ -34,29 +34,29 @@ class WeatherWorker:
     # def get_weather_icon(self) -> str:
     #     return f"{self.weather_server}/img/w/{wt['weather']['weather_icon_name']}.png"
 
-    def weather(self, forecast_type, has_connection):
+    def weather(self, forecast_type):
         if forecast_type == 'today':
-            self.weather_today(has_connection)
+            return self.weather_today()
         elif forecast_type == 'days':
-            self.weather_daily(has_connection)
+            return self.weather_daily()
         else:
-            self.weather_hourly(has_connection)
+            return self.weather_hourly()
 
-    def weather_today(self, has_connection):
-        if has_connection:
+    def weather_today(self):
+        if self.has_connected():
             return self.weather_mgr.weather_at_place(self.city.city)
         else:
             return self.db_worker.weather_today()
 
-    def weather_daily(self, has_connection):
-        if has_connection:
+    def weather_daily(self):
+        if self.has_connected():
             loc = geocoder.location(self.city)
             return self.weather_mgr.one_call(lat=loc.latitude, lon=loc.longitude).forecast_daily
         else:
             return self.db_worker.weather_daily()
 
-    def weather_hourly(self, has_connection):
-        if has_connection:
+    def weather_hourly(self):
+        if self.has_connected():
             loc = geocoder.location(self.city.latlng)
             return self.weather_mgr.one_call(lat=loc.latitude, lon=loc.longitude).forecast_hourly
         else:
@@ -78,3 +78,7 @@ class WeatherWorker:
 
 if __name__ == '__main__':
     w = WeatherWorker()
+    print(w.weather('today').to_dict()['weather'].keys())
+    print(w.weather('today').to_dict()['weather']['precipitation_probability'])
+    print()
+    print(w.weather('today').to_dict()['weather']['temperature'].keys())
