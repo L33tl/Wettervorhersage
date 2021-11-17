@@ -1,10 +1,14 @@
+from datetime import datetime
 import sys
 
+import pyowm.weatherapi25.weather
 from PyQt5 import uic
-from PyQt5.QtWidgets import QApplication, QMainWindow, QWidget
+from PyQt5.QtCore import QRect
+from PyQt5.QtWidgets import QApplication, QMainWindow, QWidget, QLabel
 
+from config import WIDTH, WEATHER_SERVER
 from main_window_ui import Ui_MainWindow
-from weather import WeatherWorker
+from weather import WeatherParser
 
 
 class MainWindow(QMainWindow, Ui_MainWindow):
@@ -14,44 +18,74 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.setupUi(self)
         self.initUI()
 
-        # self.load_widget_today()
+        self.tabs = ['today', 'days', 'hours']
+        self.current_tab_index = 0
+        self.load_widget(0)
 
     # noinspection PyAttributeOutsideInit,PyPep8Naming
     def initUI(self):
         self.change_city_form = ChangeCityForm(self)
-        self.Btn_today.clicked.connect(self.load_widget_today)
-        self.Btn_byDays.clicked.connect(self.load_widget_days)
-        self.Btn_byHours.clicked.connect(self.load_widget_hours)
         self.change_city_btn.triggered.connect(self.change_city)
+        self.tabWidget.tabBarClicked.connect(self.load_widget)
 
-        self.weather = WeatherWorker()
-        # self.current_widget = self.widget_today
-
-        print(self.tabWidget.currentWidget())
+    def load_widget(self, index):
+        self.current_tab_index = index
+        if not index:
+            return self.load_widget_today()
+        if index == 1:
+            return self.load_widget_days()
+        return self.load_widget_hours()
 
     def change_city(self):
         self.change_city_form.show()
 
-    def change_widget(self, to_widget):
-        self.current_widget.hide()
-        # noinspection PyAttributeOutsideInit
-        self.current_widget = to_widget
-        exec(f'self.load_widget_{to_widget.objectName().split("_")[1]}')
-
     def load_widget_today(self):
-        self.change_widget(self.widget_today)
-        weather = self.get_weather()
+        try:
+            weather: pyowm.weatherapi25.weather.Weather = self.get_weather().weather
+
+            self.statusEdit_label.setText(weather.detailed_status.title())
+            self.statusEdit_label.setGeometry(
+                QRect((WIDTH - self.statusEdit_label.width()) // 2,
+                      self.statusEdit_label.y(), self.statusEdit_label.sizeHint().width(),
+                      self.statusEdit_label.sizeHint().height()))
+
+            self.set_label(self.temperatureEdit_label,
+                           str(weather.temperature('celsius').get('temp')))
+            self.set_label(self.feelsLikeEdit_Label,
+                           str(weather.temperature('celsius').get('feels_like')))
+
+            timezone = datetime.now() - datetime.utcnow()
+
+            time = weather.sunrise_time('date') + timezone
+            self.set_label(self.sunriseEdit_label,
+                           f'{time.hour:02d}:{time.minute:02d}:{time.second:02d}')
+
+            time = weather.sunset_time('date') + timezone
+            self.set_label(self.sunsetEdit_label,
+                           f'{time.hour:02d}:{time.minute:02d}:{time.second:02d}')
+
+            print(self.get_weather_ico(weather.weather_icon_name))
+
+        except Exception as e:
+            print(e)
+
+    def get_weather_ico(self, ico_name):
+        return f"{WEATHER_SERVER}/img/w/{ico_name}.png"
 
     def load_widget_days(self):
-        self.change_widget(self.widget_days)
         weather = self.get_weather()
 
+    def set_label(self, label, text=None):
+        if text is not None:
+            label.setText(text)
+        label.setGeometry(label.x(), label.y(), label.sizeHint().width(), label.sizeHint().height())
+
     def load_widget_hours(self):
-        self.change_widget(self.widget_hours)
         weather = self.get_weather()
 
     def get_weather(self):
-        return self.weather.weather(self.current_widget.objectName().split('_')[1])
+        weather = WeatherParser()
+        return weather.weather(self.tabs[self.current_tab_index])
 
 
 class ChangeCityForm(QWidget):
@@ -80,7 +114,7 @@ class ChangeCityForm(QWidget):
 
 if __name__ == '__main__':
     app = QApplication(sys.argv)
+    # app.setStyleSheet(stylesheet)
     ex = MainWindow()
     ex.show()
-
     sys.exit(app.exec())

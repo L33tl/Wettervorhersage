@@ -1,7 +1,5 @@
 import sqlite3
-
-NESTED_KEYS = ['rain', 'snow', 'wind', 'pressure', 'temperature']
-DB_NAME = 'weather_db.sqlite3'
+from config import NESTED_KEYS, DB_NAME
 
 
 class DBWorker:
@@ -42,11 +40,13 @@ class DBWorker:
                     day[k] = {'no_data': 1}
 
                 cursor.execute(
-                    f'''INSERT INTO {k} ({', '.join([f"'{str(kd)}'" for kd in day[k].keys()])}) VALUES ({', '.join([f"'{str(v)}'" for v in day[k].values()])});''')
+                    f'''INSERT INTO {k} ({', '.join([f"'{str(kd)}'" for kd in day[k].keys()])}) VALUES
+                     ({', '.join([f"'{str(v)}'" for v in day[k].values()])});''')
                 day.pop(k)
 
             cursor.execute(
-                f'''insert into days ({', '.join(f"'{str(d)}'" for d in day.keys())}) values ({', '.join(f"'{str(d)}'" for d in day.values())});''')
+                f'''insert into days ({', '.join(f"'{str(d)}'" for d in day.keys())}) VALUES
+                 ({', '.join(f"'{str(d)}'" for d in day.values())});''')
         cursor.close()
         self.connect.commit()
 
