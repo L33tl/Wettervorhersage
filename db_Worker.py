@@ -24,7 +24,7 @@ class DBWorker:
     def weather_hourly(self):
         pass
 
-    def write_weather_today(self):
+    def write_weather_today(self, today):
         pass
 
     def write_weather_daily(self, days):
@@ -33,12 +33,11 @@ class DBWorker:
         for day in days:
             for k in NESTED_KEYS:
                 cursor.execute(f'''DELETE from {k}''')
-
         for day in days:
+            day = day.to_dict()
             for k in NESTED_KEYS:
                 if not day[k]:
                     day[k] = {'no_data': 1}
-
                 cursor.execute(
                     f'''INSERT INTO {k} ({', '.join([f"'{str(kd)}'" for kd in day[k].keys()])}) VALUES
                      ({', '.join([f"'{str(v)}'" for v in day[k].values()])});''')
@@ -50,7 +49,7 @@ class DBWorker:
         cursor.close()
         self.connect.commit()
 
-    def write_weather_hourly(self):
+    def write_weather_hourly(self, hours):
         pass
 
 

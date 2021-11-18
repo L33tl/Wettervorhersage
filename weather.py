@@ -20,50 +20,43 @@ class WeatherParser:
             config_dict['language'] = 'ru'
             self.owm = OWM(API_key, config_dict)
             self.weather_mgr = self.owm.weather_manager()
-            self.city = geocoder.ip('me')
+            self.city = geocoder.ip('me').city
         except ConnectionError as ce:
-            self.has_connected = False
             print(ce)
-        else:
-            self.has_connected = True
-            # print('Has connection')
         finally:
             self.db_worker = DBWorker()
 
-    # def has_connected(self) -> bool:
-    #     return bool(socket.create_connection((self.weather_server, 80)))
-
-    # def weather_by_days(self, city: str) -> pyowm.weatherapi25.one_call.OneCall:
-    #     loc = geocoder.location(city)
-    #     return self.weather_mgr.one_call(lat=loc.latitude, lon=loc.longitude)
+    def has_connected(self) -> bool:
+        return bool(socket.create_connection((self.weather_server, 80)))
 
     def weather(self, forecast_type):
         if forecast_type == 'today':
             return self.weather_today()
         elif forecast_type == 'days':
             return self.weather_daily()
-        else:
-            return self.weather_hourly()
+        return self.weather_hourly()
 
     def weather_today(self):
-        if self.has_connected:
-            return self.weather_mgr.weather_at_place(self.city.city)
-        else:
-            return self.db_worker.weather_today()
+        if self.has_connected():
+            today = self.weather_mgr.weather_at_coords(*geocoder.location(self.city).latlng)
+            self.db_worker.write_weather_today(today)
+            return today
+        return self.db_worker.weather_today()
 
     def weather_daily(self):
-        if self.has_connected:
-            loc = geocoder.location(self.city)
-            return self.weather_mgr.one_call(lat=loc.latitude, lon=loc.longitude).forecast_daily
-        else:
-            return self.db_worker.weather_daily()
+        if self.has_connected():
+            days = self.weather_mgr.one_call(*geocoder.location(self.city).latlng).forecast_daily
+            self.db_worker.write_weather_daily(days)
+            return days
+        return self.db_worker.weather_daily()
 
     def weather_hourly(self):
-        if self.has_connected:
-            loc = geocoder.location(self.city.latlng)
-            return self.weather_mgr.one_call(lat=loc.latitude, lon=loc.longitude).forecast_hourly
-        else:
-            return self.db_worker.weather_hourly()
+        if self.has_connected():
+            loc = geocoder.location(self.city) if isinstance(self.city, str) else self.city
+            hours = self.weather_mgr.one_call(lat=loc.latitude, lon=loc.longitude).forecast_hourly
+            self.db_worker.write_weather_hourly(hours)
+            return hours
+        return self.db_worker.weather_hourly()
 
     def check_city(self, city):
         try:
@@ -81,7 +74,5 @@ class WeatherParser:
 
 if __name__ == '__main__':
     w = WeatherParser()
-    print(w.weather('today').to_dict()['weather'].keys())
-    print(w.weather('today').to_dict()['weather']['precipitation_probability'])
-    print()
-    print(w.weather('today').to_dict()['weather']['temperature'].keys())
+    a: pyowm.weatherapi25.weather.Weather = w.weather('today').weather
+    print(a.to_dict())
