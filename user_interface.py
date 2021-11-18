@@ -9,6 +9,7 @@ from PyQt5.QtWidgets import (
     QApplication, QMainWindow, QWidget, QLabel, QStyle, QDialog,
     QInputDialog, QTabWidget
     )
+from change_city_UI import Ui_Dialog
 
 from config import WIDTH, WEATHER_SERVER
 from main_window_ui import Ui_MainWindow
@@ -116,10 +117,11 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         return self.weather.weather(self.tabs[self.current_tab_index])
 
 
-class ChangeCityDialog(QDialog):
+class ChangeCityDialog(QDialog, Ui_Dialog):
     def __init__(self, first_form: MainWindow):
         super().__init__()
-        uic.loadUi('change_city_UI.ui', self)
+        self.setupUi(self)
+        # uic.loadUi('change_city_UI.ui', self)
         self.ok_btn.clicked.connect(self.ok)
         self.cancel_btn.clicked.connect(self.cancel)
         self.not_found_error_label: QLabel

@@ -1,0 +1,24 @@
+QLabel {
+    font: 75 18pt "Arial";
+}
+
+QLabel#tempText_label {
+    margin: auto;
+    font: 75 18pt "Arial";
+}
+
+QLabel#feelsText_label {
+    margin: auto;
+    font: 75 18pt "Arial";
+}
+
+QMainWindow {
+}
+
+QWidget {
+    /*background: white;*/
+}
+
+QLabel#not_found_error_label {
+    font: 10pt "Arial";
+}
