@@ -11,7 +11,7 @@ from PyQt5.QtWidgets import (
     )
 from change_city_UI import Ui_Dialog
 
-from config import WIDTH, WEATHER_SERVER
+from config import WIDTH, WEATHER_SERVER, HEIGHT
 from main_window_ui import Ui_MainWindow
 from weather import WeatherParser
 
@@ -54,8 +54,9 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
         self.statusEdit_label.setText(weather.detailed_status.title())
         self.statusEdit_label.setGeometry(
-            QRect((WIDTH - self.statusEdit_label.width()) // 2,
-                  self.statusEdit_label.y(), self.statusEdit_label.sizeHint().width(),
+            QRect((WIDTH - self.statusEdit_label.sizeHint().width()) // 2,
+                  HEIGHT // 2 - self.statusEdit_label.height(),
+                  self.statusEdit_label.sizeHint().width(),
                   self.statusEdit_label.sizeHint().height()))
 
         pixmap = QPixmap('sources/circle.png')
@@ -65,8 +66,11 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.temperatureEdit_label.setPixmap(pixmap)
         self.feelsLikeEdit_label.setPixmap(pixmap)
 
-        self.tempText_label.setText(str(weather.temperature('celsius').get('temp')))
-        self.feelsText_label.setText(str(weather.temperature('celsius').get('feels_like')))
+        # self.tempText_label.setText(str(weather.temperature('celsius').get('temp')))
+        # self.feelsText_label.setText(str(weather.temperature('celsius').get('feels_like')))
+
+        self.set_label(self.tempText_label, weather.temperature('celsius').get('temp'))
+        self.set_label(self.feelsText_label, weather.temperature('celsius').get('feels_like'))
 
         timezone = datetime.now() - datetime.utcnow()
 

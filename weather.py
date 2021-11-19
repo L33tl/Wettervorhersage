@@ -38,7 +38,9 @@ class WeatherParser:
 
     def weather_today(self):
         if self.has_connected():
-            today = self.weather_mgr.weather_at_coords(*geocoder.location(self.city).latlng)
+            loc = geocoder.location(self.city)
+            print(loc)
+            today = self.weather_mgr.weather_at_coords(lat=loc.latitude, lon=loc.longitude)
             self.db_worker.write_weather_today(today)
             return today
         return self.db_worker.weather_today()

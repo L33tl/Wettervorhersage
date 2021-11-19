@@ -2,14 +2,16 @@ QLabel {
     font: 75 18pt "Arial";
 }
 
-QLabel#tempText_label {
+QLabel#statusEdit_label {
     margin: auto;
-    font: 75 18pt "Arial";
+}
+
+QLabel#tempText_label {
+    font: 75 30pt "Arial";
 }
 
 QLabel#feelsText_label {
-    margin: auto;
-    font: 75 18pt "Arial";
+    font: 75 30pt "Arial";
 }
 
 QMainWindow {
