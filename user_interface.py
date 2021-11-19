@@ -1,3 +1,6 @@
+import os
+import shutil
+import urllib.request
 from datetime import datetime
 import sys
 
@@ -49,62 +52,67 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.change_city_dialog.show()
 
     def load_widget_today(self):
-        # try:
-        weather: pyowm.weatherapi25.weather.Weather = self.get_weather().weather
+        try:
+            weather: pyowm.weatherapi25.weather.Weather = self.get_weather().weather
 
-        self.statusEdit_label.setText(weather.detailed_status.title())
-        self.statusEdit_label.setGeometry(
-            QRect((WIDTH - self.statusEdit_label.sizeHint().width()) // 2,
-                  HEIGHT // 2 - self.statusEdit_label.height(),
-                  self.statusEdit_label.sizeHint().width(),
-                  self.statusEdit_label.sizeHint().height()))
+            self.statusEdit_label.setText(weather.detailed_status.title())
+            self.statusEdit_label.setGeometry(
+                QRect((WIDTH - self.statusEdit_label.sizeHint().width()) // 2,
+                      HEIGHT // 2 - self.statusEdit_label.height(),
+                      self.statusEdit_label.sizeHint().width(),
+                      self.statusEdit_label.sizeHint().height()))
 
-        pixmap = QPixmap('sources/circle.png')
+            pixmap = QPixmap('sources/circle.png')
 
-        # self.temperatureEdit_label.setText(str(weather.temperature('celsius').get('temp')))
-        # self.feelsLikeEdit_label.setText(str(weather.temperature('celsius').get('feels_like')))
-        self.temperatureEdit_label.setPixmap(pixmap)
-        self.feelsLikeEdit_label.setPixmap(pixmap)
+            # self.temperatureEdit_label.setText(str(weather.temperature('celsius').get('temp')))
+            # self.feelsLikeEdit_label.setText(str(weather.temperature('celsius').get('feels_like')))
+            self.temperatureEdit_label.setPixmap(pixmap)
+            self.feelsLikeEdit_label.setPixmap(pixmap)
 
-        # self.tempText_label.setText(str(weather.temperature('celsius').get('temp')))
-        # self.feelsText_label.setText(str(weather.temperature('celsius').get('feels_like')))
+            # self.tempText_label.setText(str(weather.temperature('celsius').get('temp')))
+            # self.feelsText_label.setText(str(weather.temperature('celsius').get('feels_like')))
 
-        self.set_label(self.tempText_label, weather.temperature('celsius').get('temp'))
-        self.set_label(self.feelsText_label, weather.temperature('celsius').get('feels_like'))
+            self.set_label(self.tempText_label, weather.temperature('celsius').get('temp'))
+            self.set_label(self.feelsText_label, weather.temperature('celsius').get('feels_like'))
 
-        timezone = datetime.now() - datetime.utcnow()
+            timezone = datetime.now() - datetime.utcnow()
 
-        time = weather.sunrise_time('date') + timezone
-        self.set_label(self.sunriseEdit_label,
-                       f'{time.hour:02d}:{time.minute:02d}:{time.second:02d}')
+            time = weather.sunrise_time('date') + timezone
+            self.set_label(self.sunriseEdit_label,
+                           f'{time.hour:02d}:{time.minute:02d}:{time.second:02d}')
 
-        time = weather.sunset_time('date') + timezone
-        self.set_label(self.sunsetEdit_label,
-                       f'{time.hour:02d}:{time.minute:02d}:{time.second:02d}')
+            time = weather.sunset_time('date') + timezone
+            self.set_label(self.sunsetEdit_label,
+                           f'{time.hour:02d}:{time.minute:02d}:{time.second:02d}')
 
-        self.set_label(self.humidityEdit_label, f'{weather.humidity}%')
-        if weather.precipitation_probability is not None:
-            self.set_label(self.precipitationProbabilityEdit_label,
-                           f'{weather.precipitation_probability}%')
-            self.precipitationProbability_label.show()
-        else:
-            self.precipitationProbability_label.hide()
-            x = self.humidity_label.width()
-            self.humidityEdit_label.setGeometry(QRect(self.humidity_label.x() + x + x // 2,
-                                                      self.humidityEdit_label.y(),
-                                                      self.humidityEdit_label.width(),
-                                                      self.humidityEdit_label.height()))
-        if weather.humidex is not None:
-            self.set_label(self.humidexEdit_label, weather.humidex)
-            self.humidex_label.show()
-        else:
-            self.humidex_label.hide()
+            self.set_label(self.humidityEdit_label, f'{weather.humidity}%')
+            if weather.precipitation_probability is not None:
+                self.set_label(self.precipitationProbabilityEdit_label,
+                               f'{weather.precipitation_probability}%')
+                self.precipitationProbability_label.show()
+            else:
+                self.precipitationProbability_label.hide()
+                x = self.humidity_label.width()
+                self.humidityEdit_label.setGeometry(QRect(self.humidity_label.x() + x + x // 2,
+                                                          self.humidityEdit_label.y(),
+                                                          self.humidityEdit_label.width(),
+                                                          self.humidityEdit_label.height()))
+            if weather.humidex is not None:
+                self.set_label(self.humidexEdit_label, weather.humidex)
+                self.humidex_label.show()
+            else:
+                self.humidex_label.hide()
 
-        # except Exception as e:
-        #     print(e)
+            self.download_img(weather)
+            pixmap = QPixmap(f'images/{weather.weather_icon_name}')
+            self.status_img.setPixmap(pixmap)
+            self.status_img.resize(self.status_img.sizeHint().width(),
+                                   self.status_img.sizeHint().height())
+        except Exception as e:
+            print(e)
 
-    def get_weather_ico(self, ico_name):
-        return f"{WEATHER_SERVER}/img/w/{ico_name}.png"
+    def get_weather_ico(self, weather):
+        return weather.weather_icon_url("2x")
 
     def load_widget_days(self):
         weather = self.get_weather()
@@ -119,6 +127,16 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
     def get_weather(self):
         return self.weather.weather(self.tabs[self.current_tab_index])
+
+    def download_img(self, weather):
+        res = urllib.request.urlopen(self.get_weather_ico(weather))
+        out = open(f'images/{weather.weather_icon_name}', 'wb')
+        out.write(res.read())
+        out.close()
+
+    def closeEvent(self, event):
+        shutil.rmtree('images')
+        os.mkdir('images')
 
 
 class ChangeCityDialog(QDialog, Ui_Dialog):
