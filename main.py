@@ -267,13 +267,13 @@ class ChangeCityDialog(QDialog, Ui_Dialog):
     def ok(self):
         city = self.city_edit.text().strip()
         if not city or not city.isalpha():
-            return self.not_found_error_label.setText(city_not_found_string)
+            return self.not_found_error_label.setText(enter_city_name)
         answer = self.first_form.weather.change_city(city)
         if answer:
             self.first_form.load_widget(self.first_form.current_tab_index)
             self.close()
         else:
-            self.not_found_error_label.setText(enter_city_name)
+            self.not_found_error_label.setText(city_not_found_string)
 
     def cancel(self):
         self.city_edit.setText('')
