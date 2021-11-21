@@ -2,8 +2,27 @@ QLabel {
     font: 75 18pt "Arial";
 }
 
+QTabWidget {
+    /*background: azure;*/
+}
+
+QWidget#tab_today, QWidget#tab_days, QWidget#tab_hours {
+    /*background: #f9f3f9;*/
+}
+
+QHBoxLayout {
+    border: 18pt red;
+}
+
+QMenu#settings_btn {
+}
+
 QLabel#statusEdit_label {
     margin: auto;
+}
+
+QLabel#feelsText_label, QLabel#tempText_label {
+    /*margin: auto;*/
 }
 
 QLabel#tempText_label {
@@ -12,13 +31,6 @@ QLabel#tempText_label {
 
 QLabel#feelsText_label {
     font: 75 30pt "Arial";
-}
-
-QMainWindow {
-}
-
-QWidget {
-    /*background: white;*/
 }
 
 QLabel#not_found_error_label {

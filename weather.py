@@ -4,7 +4,7 @@ import geocoder
 from pyowm.commons.exceptions import NotFoundError
 from pyowm.weatherapi25.weather import Weather
 
-from config import WEATHER_SERVER
+from config import WEATHER_SERVER, HPA_MMHG
 from sconfig import API_key
 from pyowm.utils.config import get_default_config
 from db_Worker import DBWorker
@@ -39,7 +39,6 @@ class WeatherParser:
     def weather_today(self):
         if self.has_connected():
             loc = geocoder.location(self.city)
-            print(loc)
             today = self.weather_mgr.weather_at_coords(lat=loc.latitude, lon=loc.longitude)
             self.db_worker.write_weather_today(today)
             return today
@@ -60,6 +59,9 @@ class WeatherParser:
             return hours
         return self.db_worker.weather_hourly()
 
+    def get_city(self):
+        return self.city
+
     def check_city(self, city):
         try:
             self.weather_mgr.weather_at_place(city)
@@ -73,8 +75,11 @@ class WeatherParser:
             return True
         return False
 
+    def hPa_to_mmHg(self, hPa):
+        return hPa * HPA_MMHG
+
 
 if __name__ == '__main__':
     w = WeatherParser()
     a: pyowm.weatherapi25.weather.Weather = w.weather('today').weather
-    print(a.to_dict())
+    print(w.hPa_to_mmHg(a.barometric_pressure().get('press')))
