@@ -1,9 +1,9 @@
 HEIGHT = 576
 WIDTH = 1024
 WEATHER_SERVER = 'openweathermap.org'
-NESTED_KEYS = ['rain', 'snow', 'wind', 'pressure', 'temperature']
+NESTED_KEYS = ('wind', 'pressure', 'temperature')
 DB_NAME = 'weather_db.sqlite3'
-
+DEL_COLS = ('rain', 'snow')
 degree = '°'
 
 weather_keys = {
@@ -20,3 +20,6 @@ weather_keys = {
 
 HPA_MMHG = 0.750064
 K_C = -273.15
+
+city_not_found_string = 'Город не найден'
+enter_city_name = 'Введите название города'

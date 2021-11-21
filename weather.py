@@ -1,8 +1,9 @@
-import pyowm.weatherapi25.observation
+import asyncio
+
+import pyowm.weatherapi25.weather
 from pyowm import OWM
 import geocoder
 from pyowm.commons.exceptions import NotFoundError
-from pyowm.weatherapi25.weather import Weather
 
 from config import WEATHER_SERVER, HPA_MMHG
 from sconfig import API_key
@@ -32,7 +33,7 @@ class WeatherParser:
     def weather(self, forecast_type):
         if forecast_type == 'today':
             return self.weather_today()
-        elif forecast_type == 'days':
+        if forecast_type == 'days':
             return self.weather_daily()
         return self.weather_hourly()
 
@@ -46,10 +47,21 @@ class WeatherParser:
 
     def weather_daily(self):
         if self.has_connected():
-            days = self.weather_mgr.one_call(*geocoder.location(self.city).latlng).forecast_daily
+            days = self.weather_mgr.one_call(*geocoder.location(self.city).latlng).forecast_daily[:3]
             self.db_worker.write_weather_daily(days)
             return days
-        return self.db_worker.weather_daily()
+
+        a = pyowm.weatherapi25.weather.Weather
+        weather_daily = self.db_worker.weather_daily()
+
+        print(weather_daily[0]['weather_icon_name'])
+
+        for weather in weather_daily:
+            weather['sunrise'] = weather['sunrise_time']
+            weather['sunset'] = weather['sunset_time']
+            weather['last'] = {'dt': weather['reference_time']}
+
+        return [a.from_dict(weather) for weather in weather_daily]
 
     def weather_hourly(self):
         if self.has_connected():
@@ -75,11 +87,7 @@ class WeatherParser:
             return True
         return False
 
-    def hPa_to_mmHg(self, hPa):
+    # noinspection PyPep8Naming
+    @staticmethod
+    def hPa_to_mmHg(hPa):
         return hPa * HPA_MMHG
-
-
-if __name__ == '__main__':
-    w = WeatherParser()
-    a: pyowm.weatherapi25.weather.Weather = w.weather('today').weather
-    print(w.hPa_to_mmHg(a.barometric_pressure().get('press')))
