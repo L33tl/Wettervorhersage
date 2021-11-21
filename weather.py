@@ -77,6 +77,7 @@ class WeatherParser:
     def check_city(self, city):
         try:
             self.weather_mgr.weather_at_place(city)
+            print(self.weather_mgr.weather_at_place(city).location)
             return True
         except NotFoundError:
             return False
