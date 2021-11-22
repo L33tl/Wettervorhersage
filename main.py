@@ -1,10 +1,8 @@
 import os
 import shutil
 import sys
-import traceback
 import urllib.request
 from datetime import datetime
-from time import strftime, localtime
 
 import pyowm.weatherapi25.weather
 from PyQt5.QtCore import QRect, Qt
@@ -16,7 +14,7 @@ from PyQt5.QtWidgets import (
 from change_city_UI import Ui_Dialog
 from config import (
     WIDTH, HEIGHT, weather_keys, degree, K_C, city_not_found_string, enter_city_name,
-    WEATHER_SERVER, noimage
+    circle_path, noimage_path, changing_city_without_internet_string
     )
 from main_window_ui import Ui_MainWindow
 from weather import WeatherParser
@@ -24,6 +22,7 @@ from weather import WeatherParser
 stylesheet = open('sources/style.css', 'r').read()
 
 
+# noinspection PyBroadException
 class MainWindow(QMainWindow, Ui_MainWindow):
     def __init__(self):
         super().__init__()
@@ -55,8 +54,10 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
     def load_widget_today(self):
         try:
-            weather: pyowm.weatherapi25.weather.Weather = self.get_weather().weather
-
+            try:
+                weather: pyowm.weatherapi25.weather.Weather = self.get_weather().weather
+            except AttributeError:
+                weather: pyowm.weatherapi25.weather.Weather = self.get_weather()
             self.statusEdit_label.setText(weather.detailed_status.title())
             self.statusEdit_label.setGeometry(
                 QRect((WIDTH - self.statusEdit_label.sizeHint().width()) // 2,
@@ -64,7 +65,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
                       self.statusEdit_label.sizeHint().width(),
                       self.statusEdit_label.sizeHint().height()))
 
-            pixmap = QPixmap('sources/circle.png')
+            pixmap = QPixmap(circle_path)
 
             self.temperatureEdit_label.setPixmap(pixmap)
             self.feelsLikeEdit_label.setPixmap(pixmap)
@@ -99,7 +100,10 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             else:
                 self.humidex_label.hide()
 
-            pressure = self.weather.hPa_to_mmHg(weather.barometric_pressure().get('press'))
+            pressure = weather.barometric_pressure().get('press')
+            if isinstance(pressure, dict):
+                pressure = pressure.get('press')
+            pressure = self.weather.hPa_to_mmHg(pressure)
             self.pressureEdit_label.setText(str(round(pressure, 2)))
 
             clouds = weather.clouds
@@ -113,12 +117,11 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             self.status_img.resize(self.status_img.sizeHint().width(),
                                    self.status_img.sizeHint().height())
 
-        except Exception as e:
+        except Exception:
             self.throw_exception_info()
 
     def load_widget_days(self):
         try:
-            # has_connect = self.weather.has_connected()
             weather = self.get_weather()[:3]
 
             days = [[self.img_1, self.status_1, self.info_1, self.sunsettime_1, self.sunrisetime_1,
@@ -129,8 +132,6 @@ class MainWindow(QMainWindow, Ui_MainWindow):
                      self.date_3]]
 
             images = [self.download_img(w) for w in weather]
-            if not images[0]:
-                images = [noimage for _ in range(len(images))]
 
             for day in days:
                 while not day[2].isEmpty():
@@ -141,7 +142,10 @@ class MainWindow(QMainWindow, Ui_MainWindow):
                     f'{weather[i].sunrise_time("date").day}.{weather[i].sunrise_time("date").month}')
 
                 day_weather = weather[i]
-                pixmap = QPixmap(f'sources/{images[i]}.png')
+                if images[0]:
+                    pixmap = QPixmap(f'images/{images[i]}.png')
+                else:
+                    pixmap = QPixmap(noimage_path)
                 day[0].setPixmap(pixmap)
 
                 status = day[1]
@@ -201,22 +205,21 @@ class MainWindow(QMainWindow, Ui_MainWindow):
                                 row[0].setStyleSheet("QLabel{font-size: 12pt;}")
                                 row[1].setStyleSheet("QLabel{font-size: 12pt;}")
                                 self.set_row(row, day[2])
-        except Exception as e:
+        except Exception:
             self.throw_exception_info()
 
-    def throw_exception_info(self):
+    @staticmethod
+    def throw_exception_info():
         exc_info = sys.exc_info()
         fname = os.path.split(exc_info[2].tb_frame.f_code.co_filename)[1]
         print(exc_info[0], fname, exc_info[2].tb_lineno)
 
-    def load_widget_hours(self):
-        self.get_weather()
+    # def load_widget_hours(self):
+    #     self.get_weather()
 
     def set_day_info(self, label):
         date = datetime.today()
         city = self.weather.get_city()
-        if city == 'Yekaterinburg':
-            city = 'екатеринбург'
         self.set_label(label, f'Погода в г. {city.title()} на {date.day}.{date.month}')
 
     @staticmethod
@@ -237,9 +240,14 @@ class MainWindow(QMainWindow, Ui_MainWindow):
     def download_img(self, weather):
         if self.weather.has_connected():
             res = urllib.request.urlopen(self.get_weather_ico(weather))
-            out = open(f'images/{weather.weather_icon_name}.png', 'wb')
+            try:
+                out = open(f'images/{weather.weather_icon_name}.png', 'wb')
+            except FileNotFoundError:
+                os.mkdir('images')
+                out = open(f'images/{weather.weather_icon_name}.png', 'wb')
             out.write(res.read())
             out.close()
+
             return weather.weather_icon_name
         return False
 
@@ -248,7 +256,10 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         return weather.weather_icon_url("2x")
 
     def closeEvent(self, event):
-        shutil.rmtree('images')
+        try:
+            shutil.rmtree('images')
+        except FileNotFoundError:
+            self.throw_exception_info()
         os.mkdir('images')
 
 
@@ -263,14 +274,16 @@ class ChangeCityDialog(QDialog, Ui_Dialog):
 
     def ok(self):
         city = self.city_edit.text().strip()
+        if not self.first_form.weather.has_connected():
+            return self.not_found_error_label.setText(changing_city_without_internet_string)
+
         if not city:
             return self.not_found_error_label.setText(enter_city_name)
         answer = self.first_form.weather.change_city(city)
         if answer:
             self.first_form.load_widget(self.first_form.current_tab_index)
-            self.close()
-        else:
-            self.not_found_error_label.setText(city_not_found_string)
+            return self.close()
+        self.not_found_error_label.setText(city_not_found_string)
 
     def cancel(self):
         self.city_edit.setText('')

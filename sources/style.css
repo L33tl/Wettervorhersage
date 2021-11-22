@@ -1,23 +1,24 @@
+/*noinspection CssInvalidHtmlTagReference*/
 QLabel {
     font: 75 18pt "Arial";
 }
 
-QHBoxLayout {
-    border: 18pt red;
-}
-
+/*noinspection CssInvalidHtmlTagReference*/
 QLabel#statusEdit_label {
     margin: auto;
 }
 
+/*noinspection CssInvalidHtmlTagReference*/
 QLabel#tempText_label {
     font: 75 30pt "Arial";
 }
 
+/*noinspection CssInvalidHtmlTagReference*/
 QLabel#feelsText_label {
     font: 75 30pt "Arial";
 }
 
+/*noinspection CssInvalidHtmlTagReference*/
 QLabel#not_found_error_label {
     font: 10pt "Arial";
 }

@@ -1,8 +1,4 @@
-import asyncio
-import os
-import sys
-
-import pyowm.weatherapi25.weather
+from pyowm.weatherapi25.weather import Weather
 from pyowm import OWM
 import geocoder
 from pyowm.commons.exceptions import NotFoundError
@@ -37,7 +33,7 @@ class WeatherParser:
             return self.weather_today()
         if forecast_type == 'days':
             return self.weather_daily()
-        return self.weather_hourly()
+        # return self.weather_hourly()
 
     def weather_today(self):
         if self.has_connected():
@@ -45,7 +41,30 @@ class WeatherParser:
             today = self.weather_mgr.weather_at_coords(lat=loc.latitude, lon=loc.longitude)
             self.db_worker.write_weather_today(today)
             return today
-        return self.db_worker.weather_today()
+
+        weather = self.db_worker.weather_today()
+
+        weather['last'] = {'dt': weather['reference_time']}
+        for key, value in weather.items():
+            if value == 'None':
+                weather[key] = None
+            elif isinstance(value, dict):
+                for inner_key, inner_value in value.items():
+                    if inner_value == 'None':
+                        weather[key][inner_key] = None
+
+        weather['weather'] = ({
+                                  'main':        weather['status'],
+                                  'description': weather['detailed_status'],
+                                  'id':          weather['weather_code'],
+                                  'icon':        weather['weather_icon_name']
+                                  },)
+        weather['temp'] = weather['temperature']
+        weather['sunrise'] = weather['sunrise_time']
+        weather['sunset'] = weather['sunset_time']
+
+        weather = Weather.from_dict(weather)
+        return weather
 
     def weather_daily(self):
         if self.has_connected():
@@ -68,16 +87,15 @@ class WeatherParser:
             weather['temp'] = weather['temperature']
             weather['feels_like'] = weather['temp']
 
-        a = pyowm.weatherapi25.weather.Weather
-        return [a.from_dict(weather) for weather in weather_daily]
+        return [Weather.from_dict(weather) for weather in weather_daily]
 
-    def weather_hourly(self):
-        if self.has_connected():
-            loc = geocoder.location(self.city) if isinstance(self.city, str) else self.city
-            hours = self.weather_mgr.one_call(lat=loc.latitude, lon=loc.longitude).forecast_hourly
-            self.db_worker.write_weather_hourly(hours)
-            return hours
-        return self.db_worker.weather_hourly()
+    # def weather_hourly(self):
+    #     if self.has_connected():
+    #         loc = geocoder.location(self.city) if isinstance(self.city, str) else self.city
+    #         hours = self.weather_mgr.one_call(lat=loc.latitude, lon=loc.longitude).forecast_hourly
+    #         self.db_worker.write_weather_hourly(hours)
+    #         return hours
+    #     return self.db_worker.weather_hourly()
 
     def get_city(self):
         return self.city
