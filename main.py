@@ -1,6 +1,7 @@
 import os
 import shutil
 import sys
+import traceback
 import urllib.request
 from datetime import datetime
 from time import strftime, localtime
@@ -15,7 +16,7 @@ from PyQt5.QtWidgets import (
 from change_city_UI import Ui_Dialog
 from config import (
     WIDTH, HEIGHT, weather_keys, degree, K_C, city_not_found_string, enter_city_name,
-    WEATHER_SERVER
+    WEATHER_SERVER, noimage
     )
 from main_window_ui import Ui_MainWindow
 from weather import WeatherParser
@@ -113,11 +114,11 @@ class MainWindow(QMainWindow, Ui_MainWindow):
                                    self.status_img.sizeHint().height())
 
         except Exception as e:
-            print(e)
+            self.throw_exception_info()
 
     def load_widget_days(self):
         try:
-            has_connect = self.weather.has_connected()
+            # has_connect = self.weather.has_connected()
             weather = self.get_weather()[:3]
 
             days = [[self.img_1, self.status_1, self.info_1, self.sunsettime_1, self.sunrisetime_1,
@@ -129,23 +130,18 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
             images = [self.download_img(w) for w in weather]
             if not images[0]:
-                images = ['noimage' for i in range(len(images))]
+                images = [noimage for _ in range(len(images))]
 
             for day in days:
                 while not day[2].isEmpty():
                     day[2].removeRow(0)
 
             for i, day in enumerate(days):
-                if has_connect:
-                    day[5].setText(
-                        f'{weather[i].sunrise_time("date").day}.{weather[i].sunrise_time("date").month}')
-                else:
-                    d = localtime(weather[i].sunrise_time()).tm_mday
-                    m = localtime(weather[i].sunrise_time()).tm_mon
-                    day[5].setText(f'{d}.{m}')
+                day[5].setText(
+                    f'{weather[i].sunrise_time("date").day}.{weather[i].sunrise_time("date").month}')
 
                 day_weather = weather[i]
-                pixmap = QPixmap(f'images/{images[i]}.png')
+                pixmap = QPixmap(f'sources/{images[i]}.png')
                 day[0].setPixmap(pixmap)
 
                 status = day[1]
@@ -155,17 +151,11 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
                 timezone = datetime.now() - datetime.utcnow()
 
-                if has_connect:
-                    time = day_weather.sunrise_time('date')
-                    time += timezone
-                    day[4].setText(f'{time.hour:02d}:{time.minute:02d}:{time.second:02d}')
-                    time = day_weather.sunset_time('date') + timezone
-                    day[3].setText(f'{time.hour:02d}:{time.minute:02d}:{time.second:02d}')
-                else:
-                    st = localtime(weather[i].sunrise_time())
-                    day[4].setText(f'{st.tm_hour}:{st.tm_min}:{st.tm_sec}')
-                    st = localtime(weather[i].sunset_time())
-                    day[3].setText(f'{st.tm_hour}:{st.tm_min}:{st.tm_sec}')
+                time = day_weather.sunrise_time('date')
+                time += timezone
+                day[4].setText(f'{time.hour:02d}:{time.minute:02d}:{time.second:02d}')
+                time = day_weather.sunset_time('date') + timezone
+                day[3].setText(f'{time.hour:02d}:{time.minute:02d}:{time.second:02d}')
 
                 dict_weather = day_weather.to_dict()
                 for en_key, ru_key in weather_keys.items():
@@ -177,8 +167,10 @@ class MainWindow(QMainWindow, Ui_MainWindow):
                             elif en_key == 'humidity':
                                 value = f'{int(value)}%'
                             elif en_key == 'pressure':
-                                pressure = self.weather.hPa_to_mmHg(
-                                    day_weather.barometric_pressure().get('press'))
+                                pressure = day_weather.barometric_pressure().get('press')
+                                if isinstance(pressure, dict):
+                                    pressure = pressure['press']
+                                pressure = self.weather.hPa_to_mmHg(pressure)
                                 value = round(pressure, 2)
 
                             row = (QLabel(ru_key), QLabel(str(value)))
@@ -210,7 +202,12 @@ class MainWindow(QMainWindow, Ui_MainWindow):
                                 row[1].setStyleSheet("QLabel{font-size: 12pt;}")
                                 self.set_row(row, day[2])
         except Exception as e:
-            print(e)
+            self.throw_exception_info()
+
+    def throw_exception_info(self):
+        exc_info = sys.exc_info()
+        fname = os.path.split(exc_info[2].tb_frame.f_code.co_filename)[1]
+        print(exc_info[0], fname, exc_info[2].tb_lineno)
 
     def load_widget_hours(self):
         self.get_weather()

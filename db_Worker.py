@@ -1,17 +1,20 @@
 import sqlite3
-from config import NESTED_KEYS, DB_NAME, DEL_COLS
+
+import pyowm.weatherapi25.weather
+
+from config import NESTED_KEYS, DB_NAME_DAYS, DEL_COLS, table_today_name, DB_NAME_TODAY
 
 
 class DBWorker:
     def __init__(self):
-        self.db_name = DB_NAME
-        self.connect = sqlite3.connect(self.db_name)
+        self.connect_days = sqlite3.connect(DB_NAME_DAYS)
+        self.connect_today = sqlite3.connect(DB_NAME_TODAY)
 
     def weather_today(self):
         pass
 
     def weather_daily(self):
-        cursor = self.connect.cursor()
+        cursor = self.connect_days.cursor()
         days = cursor.execute('''SELECT * from days''').fetchall()
         columns_names = [col[0] for col in cursor.description][1:]
 
@@ -40,15 +43,35 @@ class DBWorker:
                         pass
 
                 days[i][table] = dict(zip(data_columns_names, data))
-
         cursor.close()
         return days
 
     def weather_hourly(self):
         pass
 
-    def write_weather_today(self, today):
-        pass
+    def write_weather_today(self, today: pyowm.weatherapi25.weather.Weather):
+        today = today.to_dict().get('weather')
+
+        normal_keys = set()
+        for today_key, today_value in today.items():
+            if not isinstance(today_value, dict):
+                normal_keys.add(today_key)
+
+        cursor = self.connect_today.cursor()
+        # cursor.execute(f'''UPDATE today SET {', '.join([f"{key} = {today[key]}" for key in
+        # normal_keys])}''')
+
+        cursor.execute(f'''DELETE FROM {table_today_name}''')
+        for table in NESTED_KEYS:
+            cursor.execute(f'''DELETE FROM {table}''')
+
+            cursor.execute(
+                f'''INSERT INTO {table} ({", ".join([f'{key}' for key in today[table].keys()])})
+                    VALUES ({', '.join([str(value) for value in today[table].values()])})''')
+
+        cursor.execute(f'''INSERT INTO {table_today_name}''')
+
+        self.connect.commit()
 
     def write_weather_daily(self, days):
         cursor = self.connect.cursor()

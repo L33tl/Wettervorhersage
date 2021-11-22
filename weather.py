@@ -1,4 +1,6 @@
 import asyncio
+import os
+import sys
 
 import pyowm.weatherapi25.weather
 from pyowm import OWM
@@ -22,8 +24,8 @@ class WeatherParser:
             self.owm = OWM(API_key, config_dict)
             self.weather_mgr = self.owm.weather_manager()
             self.city = geocoder.ip('me').city
-        except ConnectionError as ce:
-            print(ce)
+        except Exception as e:
+            print(e)
         finally:
             self.db_worker = DBWorker()
 
@@ -51,16 +53,22 @@ class WeatherParser:
             self.db_worker.write_weather_daily(days)
             return days
 
-        a = pyowm.weatherapi25.weather.Weather
         weather_daily = self.db_worker.weather_daily()
-
-        print(weather_daily[0]['weather_icon_name'])
 
         for weather in weather_daily:
             weather['sunrise'] = weather['sunrise_time']
             weather['sunset'] = weather['sunset_time']
             weather['last'] = {'dt': weather['reference_time']}
+            weather['weather'] = ({
+                                      'main':        weather['status'],
+                                      'description': weather['detailed_status'],
+                                      'id':          weather['weather_code'],
+                                      'icon':        weather['weather_icon_name']
+                                      },)
+            weather['temp'] = weather['temperature']
+            weather['feels_like'] = weather['temp']
 
+        a = pyowm.weatherapi25.weather.Weather
         return [a.from_dict(weather) for weather in weather_daily]
 
     def weather_hourly(self):
@@ -77,7 +85,6 @@ class WeatherParser:
     def check_city(self, city):
         try:
             self.weather_mgr.weather_at_place(city)
-            print(self.weather_mgr.weather_at_place(city).location)
             return True
         except NotFoundError:
             return False
@@ -92,3 +99,8 @@ class WeatherParser:
     @staticmethod
     def hPa_to_mmHg(hPa):
         return hPa * HPA_MMHG
+
+
+if __name__ == '__main__':
+    w = WeatherParser()
+    w.weather_today()
